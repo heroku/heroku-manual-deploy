@@ -13,10 +13,10 @@ class Heroku::Command::Deploy < Heroku::Command::Base
   # $ heroku deploy web.1
   # Deploying web.1 process... done
   #
-  # $ heroku deploy:rolling web
+  # $ heroku deploy web
   # Deploying web processes... done
   #
-  # $ heroku deploy:rolling
+  # $ heroku deploy
   # Deploying processes... done
   #
   def index
