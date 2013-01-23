@@ -11,6 +11,8 @@ $ heroku plugins:install git@github.com:heroku/heroku-manual-deploy.git
 ## Usage
 
 ```
+# Deploy
+
 $ heroku deploy web.1
 Deploying web.1 process... done
 
@@ -19,6 +21,9 @@ Deploying web processes... done
 
 $ heroku deploy
 Deploying processes... done
+
+
+# Rolling Deploy
 
 $ heroku deploy:rolling web.1
 Deploying web.1 process... done
