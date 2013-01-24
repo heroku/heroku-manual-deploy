@@ -25,9 +25,6 @@ Deploying processes... done
 
 # Rolling Deploy
 
-$ heroku deploy:rolling web.1
-Deploying web.1 process... done
-
 $ heroku deploy:rolling web
 Deploying web processes...
 Deploying web.1 process... done
