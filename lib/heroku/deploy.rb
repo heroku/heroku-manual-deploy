@@ -64,8 +64,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
   def rolling
     process = shift_argument
     validate_arguments!
-    interval = (options[:interval] || "20").to_i
-
+    interval = (options[:interval] || "10").to_i
     message, options = case process
     when NilClass
       first = true
