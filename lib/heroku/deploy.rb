@@ -67,14 +67,12 @@ class Heroku::Command::Deploy < Heroku::Command::Base
     interval = (options[:interval] || "10").to_i
     message, options = case process
     when NilClass
-      first = true
       entries = api.get_ps(app).body
       entries.each_with_index do |entry, index|
         ps = entry['process']
-        action((first ? "\n" : "") + "Deploying #{ps} process") do
+        action("Deploying #{ps} process") do
           api.post_ps_restart(app, { :ps => ps })
         end
-        first = false
         sleep(interval) if (index+1 != entries.size)
       end
     when /.+\..+/
@@ -84,15 +82,13 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       end
     else
       type = args.first
-      first = true
       entries = api.get_ps(app).body
       entries.each_with_index do |entry, index|
         ps = entry['process']
         if ps.split(".").first == type
-          action((first ? "\n" : "") + "Deploying #{ps} process") do
+          action("Deploying #{ps} process") do
             api.post_ps_restart(app, { :ps => ps })
           end
-          first = false
           sleep(interval) if (index+1 != entries.size)
         end
       end
