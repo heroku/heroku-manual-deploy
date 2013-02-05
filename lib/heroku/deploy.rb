@@ -64,7 +64,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
   def rolling
     process = shift_argument
     validate_arguments!
-    interval = options[:interval]
+    interval = (options[:interval] || "20").to_i
 
     message, options = case process
     when NilClass
@@ -77,7 +77,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
             api.post_ps_restart(app, { :ps => ps })
           end
           first = false
-          sleep interval.to_i if interval && index+1 != entries.size
+          sleep(interval) if (index+1 != entries.size)
         end
       end
     when /.+\..+/
@@ -97,7 +97,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
               api.post_ps_restart(app, { :ps => ps })
             end
             first = false
-            sleep interval.to_i if interval && index+1 != entries.size
+            sleep(interval) if (index+1 != entries.size)
           end
         end
       end
