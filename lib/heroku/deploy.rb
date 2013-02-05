@@ -68,17 +68,15 @@ class Heroku::Command::Deploy < Heroku::Command::Base
 
     message, options = case process
     when NilClass
-      action("Deploying processes") do
-        first = true
-        entries = api.get_ps(app).body
-        entries.each_with_index do |entry, index|
-          ps = entry['process']
-          action((first ? "\n" : "") + "Deploying #{ps} process") do
-            api.post_ps_restart(app, { :ps => ps })
-          end
-          first = false
-          sleep(interval) if (index+1 != entries.size)
+      first = true
+      entries = api.get_ps(app).body
+      entries.each_with_index do |entry, index|
+        ps = entry['process']
+        action((first ? "\n" : "") + "Deploying #{ps} process") do
+          api.post_ps_restart(app, { :ps => ps })
         end
+        first = false
+        sleep(interval) if (index+1 != entries.size)
       end
     when /.+\..+/
       ps = args.first
@@ -87,18 +85,16 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       end
     else
       type = args.first
-        action("Deploying #{type} process") do
-        first = true
-        entries = api.get_ps(app).body
-        entries.each_with_index do |entry, index|
-          ps = entry['process']
-          if ps.split(".").first == type
-            action((first ? "\n" : "") + "Deploying #{ps} process") do
-              api.post_ps_restart(app, { :ps => ps })
-            end
-            first = false
-            sleep(interval) if (index+1 != entries.size)
+      first = true
+      entries = api.get_ps(app).body
+      entries.each_with_index do |entry, index|
+        ps = entry['process']
+        if ps.split(".").first == type
+          action((first ? "\n" : "") + "Deploying #{ps} process") do
+            api.post_ps_restart(app, { :ps => ps })
           end
+          first = false
+          sleep(interval) if (index+1 != entries.size)
         end
       end
     end
