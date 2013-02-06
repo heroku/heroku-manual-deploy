@@ -67,7 +67,8 @@ class Heroku::Command::Deploy < Heroku::Command::Base
     deployed = 0
     total = processes.count
     width = total.to_s.length
-    (1..30).each do |progress|
+    interval = 60
+    (1..interval).each do |progress|
       ticker = ["-", "\\", "|", "/"][progress % 4]
       $stdout.print("\r")
       if processes.count <= 15
@@ -77,12 +78,12 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       end
       $stdout.flush()
       processes.each_with_index do |process, index|
-        if (((index / processes.size.to_f) * 29.0).to_i + 1) == progress
+        if (((index / processes.size.to_f) * (interval -1).to_f).to_i + 1) == progress
           api.post_ps_restart(app, {:ps => process["process"]})
           deployed += 1
         end
       end
-      wait_til(start+progress) if (progress !=30)
+      wait_til(start + progress) if (progress != interval)
     end
     $stdout.print("\r")
     $stdout.print("Deploying processes... done#{" " * 6}\n")
