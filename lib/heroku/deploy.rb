@@ -46,42 +46,44 @@ class Heroku::Command::Deploy < Heroku::Command::Base
   #Example:
   #
   # $ heroku deploy:rolling
-  # Deploying web.1 process... done
-  # Deploying web.2 process... done
-  # Deploying web.3 process... done
+  # Deploying processes... (=========                     )
   #
   def rolling
     validate_arguments!
-    processes = api.get_ps(app).body.
-      map { |p| p.merge("process_type" => p["process"].split(".")[0], "process_num" => p["process"].split(".")[1].to_i) }.
-      sort_by { |p| [p["process_type"], p["process_num"]] }
-    web_processes = processes.select { |p| p["process_type"] == "web" }
-    other_processes = processes - web_processes
-    if web_processes.size <= 1
-      error("Rolling deploys require at least 2 web processes.")
+    processes = api.get_ps(app).body.map do |p|
+      p.merge("process_type" => p["process"].split(".")[0],
+              "process_num" => p["process"].split(".")[1].to_i)
     end
-    total_interval = 60.0
+    process_counts = processes.inject({}) do |counts, process|
+      counts[process["process_type"]] ||= 0
+      counts[process["process_type"]] += 1
+      counts
+    end
+    processes.sort_by! do |p|
+      (p["process_num"].to_f / process_counts[p["process_type"]].to_f)
+    end
+
     start = Time.now
-    process_interval = total_interval / web_processes.size
-    web_processes.each_with_index do |web_process, index|
-      ps = web_process["process"]
-      action("Deploying #{ps} process") do
-        api.post_ps_restart(app, {:ps => ps})
-        wait(start + (index+1)*process_interval)
+    (1..30).each do |progress|
+      $stdout.print("\r")
+      $stdout.print("Deploying processes... (#{"="*progress}#{" "*(30-progress)})")
+      $stdout.flush()
+      processes.each_with_index do |process, index|
+        if (((index / processes.size.to_f) * 29.0).to_i + 1) == progress
+          api.post_ps_restart(app, {:ps => process["process"]})
+        end
       end
+      wait_til(start+progress) if (progress !=30)
     end
-    other_processes.each_with_index do |other_process, index|
-      ps = other_process["process"]
-      action("Deploying #{ps} process") do
-        api.post_ps_restart(app, {:ps => ps})
-      end
-    end
+    $stdout.print("\r")
+    $stdout.print("Deploying processes... done#{" " * 28}\n")
+    $stdout.flush()
   end
 
   private
 
-  def wait(til)
-    delta = til - Time.now
+  def wait_til(t)
+    delta = t.to_f - Time.now.to_f
     if delta > 0
       sleep(delta)
     end
