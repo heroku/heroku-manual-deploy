@@ -4,7 +4,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
 
   # deploy [PROCESS]
   #
-  # deploy an app
+  # deploy processes for an app
   #
   # if PROCESS is not specified, deploy all processes on the app
   #
@@ -39,59 +39,51 @@ class Heroku::Command::Deploy < Heroku::Command::Base
     end
   end
 
-  # deploy:rolling [PROCESS]
+  # deploy:rolling
   #
-  # rolling deploy of an app
+  # deploy processes for an app with a rolling restart
   #
-  # if PROCESS is not specified, deploy all processes on the app
-  # -i, --interval SECONDS  # time between deploys
-  #
-  #Examples:
-  #
-  # $ heroku deploy:rolling web.1
-  # Deploying web.1 process... done
-  #
-  # $ heroku deploy:rolling web
-  # Deploying web processes...
-  # Deploying web.1 process... done
-  # done
+  #Example:
   #
   # $ heroku deploy:rolling
-  # Deploying processes...
   # Deploying web.1 process... done
-  # done
+  # Deploying web.2 process... done
+  # Deploying web.3 process... done
   #
   def rolling
-    process = shift_argument
     validate_arguments!
-    interval = (options[:interval] || "10").to_i
-    message, options = case process
-    when NilClass
-      entries = api.get_ps(app).body
-      entries.each_with_index do |entry, index|
-        ps = entry['process']
-        action("Deploying #{ps} process") do
-          api.post_ps_restart(app, { :ps => ps })
-        end
-        sleep(interval) if (index+1 != entries.size)
-      end
-    when /.+\..+/
-      ps = args.first
+    processes = api.get_ps(app).body.
+      map { |p| p.merge("process_type" => p["process"].split(".")[0], "process_num" => p["process"].split(".")[1].to_i) }.
+      sort_by { |p| [p["process_type"], p["process_num"]] }
+    web_processes = processes.select { |p| p["process_type"] == "web" }
+    other_processes = processes - web_processes
+    if web_processes.size <= 1
+      error("Rolling deploys require at least 2 web processes.")
+    end
+    total_interval = 60.0
+    start = Time.now
+    process_interval = total_interval / web_processes.size
+    web_processes.each_with_index do |web_process, index|
+      ps = web_process["process"]
       action("Deploying #{ps} process") do
-        api.post_ps_restart(app, { :ps => ps })
+        api.post_ps_restart(app, {:ps => ps})
+        wait(start + (index+1)*process_interval)
       end
-    else
-      type = args.first
-      entries = api.get_ps(app).body
-      entries.each_with_index do |entry, index|
-        ps = entry['process']
-        if ps.split(".").first == type
-          action("Deploying #{ps} process") do
-            api.post_ps_restart(app, { :ps => ps })
-          end
-          sleep(interval) if (index+1 != entries.size)
-        end
+    end
+    other_processes.each_with_index do |other_process, index|
+      ps = other_process["process"]
+      action("Deploying #{ps} process") do
+        api.post_ps_restart(app, {:ps => ps})
       end
+    end
+  end
+
+  private
+
+  def wait(til)
+    delta = til - Time.now
+    if delta > 0
+      sleep(delta)
     end
   end
 end
