@@ -59,7 +59,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       counts[process["process_type"]] += 1
       counts
     end
-    processes.sort_by! do |p|
+    processes = processes.sort_by do |p|
       (p["process_num"].to_f / process_counts[p["process_type"]].to_f)
     end
 
