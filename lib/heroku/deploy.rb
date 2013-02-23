@@ -39,20 +39,29 @@ class Heroku::Command::Deploy < Heroku::Command::Base
     end
   end
 
-  # deploy:rolling
+  # deploy:rolling [PROCESS]
   #
   # deploy processes for an app with a rolling restart
   #
+  # if PROCESS is not specified, deploy all processes on the app
+  #
   #Example:
+  #
+  # $ heroku deploy:rolling web
+  # Deploying web processes... (=========                     )
   #
   # $ heroku deploy:rolling
   # Deploying processes... (=========                     )
   #
   def rolling
+    process = shift_argument
     validate_arguments!
     processes = api.get_ps(app).body.map do |p|
       p.merge("process_type" => p["process"].split(".")[0],
               "process_num" => p["process"].split(".")[1].to_i)
+    end
+    processes = processes.select do |p|
+      process.nil? || p["process_type"] == process
     end
     process_counts = processes.inject({}) do |counts, process|
       counts[process["process_type"]] ||= 0
@@ -63,6 +72,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       (p["process_num"].to_f / process_counts[p["process_type"]].to_f)
     end
 
+    message = process.nil? ? "Deploying" : "Deploying #{process}"
     start = Time.now
     deployed = 0
     total = processes.count
@@ -72,9 +82,9 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       ticker = ["-", "\\", "|", "/"][progress % 4]
       $stdout.print("\r")
       if processes.count <= 15
-        $stdout.printf("Deploying processes... (%-#{width}s/%-#{width}s) %s", deployed.to_s, total.to_s, ticker)
+        $stdout.printf("#{message} processes... (%-#{width}s/%-#{width}s) %s", deployed.to_s, total.to_s, ticker)
       else
-        $stdout.printf("Deploying processes... (%-#{width}s/%-#{width}s)", deployed.to_s, total.to_s)
+        $stdout.printf("#{message} processes... (%-#{width}s/%-#{width}s)", deployed.to_s, total.to_s)
       end
       $stdout.flush()
       processes.each_with_index do |process, index|
@@ -86,7 +96,7 @@ class Heroku::Command::Deploy < Heroku::Command::Base
       wait_til(start + progress) if (progress != interval)
     end
     $stdout.print("\r")
-    $stdout.print("Deploying processes... done#{" " * 6}\n")
+    $stdout.print("#{message} processes... done#{" " * 6}\n")
     $stdout.flush()
   end
 
