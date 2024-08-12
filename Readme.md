@@ -1,3 +1,5 @@
+**NOTE:** This plugin has been archived and is no longer maintained. It is not installable with the current node-based CLI.
+
 # heroku-manual-deploy
 
 Manual deploy commands.
